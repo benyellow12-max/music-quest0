@@ -2,7 +2,11 @@
 if (!window.firebaseExports) {
   console.error('Firebase not initialized. Make sure firebase-config.js loads first.');
 }
-const { auth, db, doc, getDoc, googleProvider, onAuthStateChanged, setDoc, signInWithPopup, signOut } = window.firebaseExports || {};
+
+// Don't destructure immediately - access dynamically to allow async initialization
+function getFirebase() {
+  return window.firebaseExports || {};
+}
 
 // Use getter functions for DOM elements to ensure they're fresh
 function getInput() {
@@ -1304,7 +1308,8 @@ async function showProfileTab() {
 
   if (isLoggedIn) {
     try {
-      const userDoc = await getDoc(doc('users', currentUser.uid));
+      const fb = getFirebase();
+      const userDoc = await fb.getDoc(fb.doc('users', currentUser.uid));
       const userData = userDoc.exists() ? userDoc.data() : {};
       
       const el = document.getElementById('profile-content');
@@ -1343,27 +1348,50 @@ async function showProfileTab() {
   const loginBtn = document.getElementById('login-btn');
   if (loginBtn) {
     loginBtn.onclick = async () => {
+      // Show loading state
+      loginBtn.disabled = true;
+      loginBtn.textContent = 'Initializing...';
+      
+      // Wait for Firebase to be initialized (with timeout)
+      let attempts = 0;
+      while (!window.firebaseInitialized && attempts < 20) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        attempts++;
+      }
+      
       try {
+        const fb = getFirebase();
+        console.log('[Login] Firebase state:', { 
+          auth: !!fb.auth, 
+          googleProvider: !!fb.googleProvider,
+          googleProviderType: fb.googleProvider ? fb.googleProvider.constructor.name : 'undefined'
+        });
+        
         // Check if Firebase is initialized
-        if (!window.firebaseExports || !auth || !googleProvider) {
-          alert('Firebase authentication is not initialized. Please refresh the page and try again.');
-          console.error('Firebase not initialized:', { 
+        if (!window.firebaseExports || !fb.auth || !fb.googleProvider) {
+          loginBtn.disabled = false;
+          loginBtn.textContent = 'Login with Google';
+          alert('Firebase authentication is not available. Check browser console for details.');
+          console.error('[Login] Firebase not initialized:', { 
             firebaseExports: !!window.firebaseExports, 
-            auth: !!auth, 
-            googleProvider: !!googleProvider 
+            auth: !!fb.auth, 
+            googleProvider: !!fb.googleProvider,
+            firebaseSDK: typeof firebase
           });
           return;
         }
 
-        const result = await signInWithPopup(auth, googleProvider);
+        loginBtn.textContent = 'Opening login...';
+        console.log('[Login] Calling signInWithPopup with provider:', fb.googleProvider);
+        const result = await fb.signInWithPopup(fb.googleProvider);
         currentUser = result.user;
         
         // Create user document if it doesn't exist
-        if (db && doc && getDoc && setDoc) {
-          const userRef = doc('users', result.user.uid);
-          const userDoc = await getDoc(userRef);
+        if (fb.db && fb.doc && fb.getDoc && fb.setDoc) {
+          const userRef = fb.doc('users', result.user.uid);
+          const userDoc = await fb.getDoc(userRef);
           if (!userDoc.exists()) {
-            await setDoc(userRef, {
+            await fb.setDoc(userRef, {
               email: result.user.email,
               displayName: result.user.displayName,
               createdAt: new Date(),
@@ -1374,6 +1402,8 @@ async function showProfileTab() {
         
         showProfileTab();
       } catch (err) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login with Google';
         console.error('Login failed:', err);
         if (err.code === 'auth/popup-closed-by-user') {
           // User closed the popup, don't show error
@@ -1388,7 +1418,8 @@ async function showProfileTab() {
   if (logoutBtn) {
     logoutBtn.onclick = async () => {
       try {
-        await signOut(auth);
+        const fb = getFirebase();
+        await fb.signOut();
         currentUser = null;
         showProfileTab();
       } catch (err) {
@@ -1545,14 +1576,20 @@ function showDeveloperTab() {
 
 
 // Listen for auth state changes
-if (onAuthStateChanged && auth) {
-  onAuthStateChanged(auth, (user) => {
-    currentUser = user;
-    console.log('Auth state changed:', user ? user.email : 'Not logged in');
-  });
-} else {
-  console.warn('Firebase auth not available');
+function initAuthListener() {
+  const fb = getFirebase();
+  if (fb.onAuthStateChanged) {
+    fb.onAuthStateChanged((user) => {
+      currentUser = user;
+      console.log('Auth state changed:', user ? user.email : 'Not logged in');
+    });
+  } else {
+    console.warn('Firebase auth not available yet, will retry...');
+    // Retry after Firebase initialization
+    setTimeout(initAuthListener, 500);
+  }
 }
+initAuthListener();
 
 // Expose functions to window for HTML onclick handlers
 console.log('[app.js] About to expose functions to window');

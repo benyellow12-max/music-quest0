@@ -1,3 +1,5 @@
+// Load environment variables from .env if present (local development)
+require('dotenv').config();
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
