@@ -98,5 +98,22 @@
       "type": "song",
       "entityId": "rec_0006"
     }
+  },
+  {
+    "id": "qst_0007",
+    "templateId": "qtpl_0006",
+    "params": {
+      "startTime": "18:00",
+      "endTime": "6:00"
+    },
+    "state": {
+      "status": "active",
+      "matchedRecordingIds": [],
+      "matchedRecordingIdsSet": {}
+    },
+    "reward": {
+      "type": "song",
+      "entityId": "rec_0007"
+    }
   }
 ]
