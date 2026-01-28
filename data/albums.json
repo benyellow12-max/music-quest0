@@ -54,5 +54,21 @@
         "year": 2004,
         "recordingIds": ["rec_0010"],
         "type": "Compilation"
+    },
+    {
+        "id": "alb_0008",
+        "title": "All Eyez on Me",
+        "artistIds": ["art_0005"],
+        "year": 1996,
+        "recordingIds": ["rec_0011"],
+        "type": "LP"
+    },
+    {
+        "id": "alb_0009",
+        "title": "2Pacalypse Now",
+        "artistIds": ["art_0005"],
+        "year": 1991,
+        "recordingIds": ["rec_0012"],
+        "type": "LP"
     }
 ]

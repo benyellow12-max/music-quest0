@@ -148,5 +148,33 @@
       "time_signature": "4/4",
       "duration_seconds": 182
     }
+  },
+  {
+    "song_id": "rec_0011",
+    "title": "Ambitionz Az a Ridah",
+    "variant": "Album Version",
+    "artist_ids": ["art_0005"],
+    "year": 1996,
+    "album_id": ["alb_0008"],
+    "genre_ids": ["gen_0023"],
+    "audio": {
+      "bpm": 87,
+      "time_signature": "4/4",
+      "duration_seconds": 278
+    }
+  },
+  {
+    "song_id": "rec_0012",
+    "title": "If My Homie Calls",
+    "variant": "Album Version",
+    "artist_ids": ["art_0005"],
+    "year": 1991,
+    "album_id": ["alb_0009"],
+    "genre_ids": ["gen_0002"],
+    "audio": {
+      "bpm": 104,
+      "time_signature": "4/4",
+      "duration_seconds": 258
+    }
   }
 ]

@@ -111,5 +111,35 @@
     "id": "gen_0022",
     "name": "Traditional/Folk",
     "parentId": null
+  },
+  {
+    "id": "gen_0023",
+    "name": "Gangsta Rap",
+    "parentId": "gen_0002"
+  },
+  {
+    "id": "gen_0024",
+    "name": "Punk",
+    "parentId": "gen_0001"
+  },
+  {
+    "id": "gen_0025",
+    "name": "Hardcore Punk",
+    "parentId": "gen_0024"
+  },
+  {
+    "id": "gen_0026",
+    "name": "Post-Hardcore",
+    "parentId": "gen_0025"
+  },
+  {
+    "id": "gen_0027",
+    "name": "Emocore",
+    "parentId": "gen_0026"
+  },
+  {
+    "id": "gen_0028",
+    "name": "Emo Pop",
+    "parentId": ["gen_0027", "gen_0005"]
   }
-  ]
+]

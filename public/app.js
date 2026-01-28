@@ -854,12 +854,20 @@ window.showSubgenreDirect = (idx, context) => {
   }
 };
 
+window.showGenreFromList = (idx) => {
+  const genre = allGenres[idx];
+  if (genre) showGenre(genre);
+};
+
 function showGenre(genre) {
   try {
     if (!genre) {
       getMainContent().innerHTML = `<h1>Error</h1><p>No genre data provided</p>`;
       return;
     }
+    
+    console.log('[showGenre] Genre data:', genre);
+    console.log('[showGenre] parentId:', genre.parentId, 'Type:', typeof genre.parentId, 'IsArray:', Array.isArray(genre.parentId));
     
     const results = document.getElementById("results");
     if (results) results.innerHTML = "";
@@ -868,7 +876,22 @@ function showGenre(genre) {
     updateBackButton();
 
     const genreSongs = (allSongs || []).filter(s => s && s.genre_ids && Array.isArray(s.genre_ids) && s.genre_ids.includes(genre.id));
-    const subgenres = (allGenres || []).filter(g => g && g.parentId === genre.id);
+    
+    // Find subgenres - genres that list this one as a parent
+    const subgenres = (allGenres || []).filter(g => {
+      if (!g || !g.parentId) return false;
+      const parents = Array.isArray(g.parentId) ? g.parentId : [g.parentId];
+      return parents.includes(genre.id);
+    });
+    
+    // Find parent genres - support both single parentId and array of parentIds
+    const parentGenres = genre.parentId 
+      ? (Array.isArray(genre.parentId) ? genre.parentId : [genre.parentId])
+          .map(id => (allGenres || []).find(g => g && g.id === id))
+          .filter(Boolean)
+      : [];
+    
+    console.log('[showGenre] Parent genres found:', parentGenres);
     
     // Find root genres (genres this one is descended from)
     const rootGenres = genre.rootId 
@@ -886,56 +909,7 @@ function showGenre(genre) {
 
     let html = `<h1>${genre.name}</h1>`;
     
-    if (genre.parentId) {
-      const parentGenre = allGenres.find(g => g.id === genre.parentId);
-      if (parentGenre) {
-        html += `<p><strong>Parent Genre:</strong> <span class="link" onclick="showGenre(${JSON.stringify(parentGenre).replace(/"/g, '&quot;')})">${parentGenre.name}</span></p>`;
-      }
-    }
-
-    // Display root genres (ancestral genres)
-    if (rootGenres.length > 0) {
-      html += `<div class="section-card"><h3>🌳 Root Genres</h3><p class="muted">This genre descended from:</p><div class="items-list">`;
-      rootGenres.forEach(rootGenre => {
-        html += `<div class="list-item" onclick="showGenre(${JSON.stringify(rootGenre).replace(/"/g, '&quot;')})">
-          <div class="item-info">
-            <div>${rootGenre.name}</div>
-            <div class="subtitle">Ancestral genre</div>
-          </div>
-        </div>`;
-      });
-      html += `</div></div>`;
-    }
-
-    // Display descendant genres
-    if (descendantGenres.length > 0) {
-      html += `<div class="section-card"><h3>🌿 Descendant Genres</h3><p class="muted">Genres descended from this:</p><div class="items-list">`;
-      descendantGenres.forEach(descGenre => {
-        const descSongCount = (allSongs || []).filter(s => s && s.genre_ids && Array.isArray(s.genre_ids) && s.genre_ids.includes(descGenre.id)).length;
-        html += `<div class="list-item" onclick="showGenre(${JSON.stringify(descGenre).replace(/"/g, '&quot;')})">
-          <div class="item-info">
-            <div>${descGenre.name}</div>
-            <div class="subtitle">${descSongCount} song${descSongCount !== 1 ? 's' : ''}</div>
-          </div>
-        </div>`;
-      });
-      html += `</div></div>`;
-    }
-
-    if (subgenres.length > 0) {
-      html += `<h3>Subgenres (${subgenres.length})</h3><div class="items-list">`;
-      subgenres.forEach((subgenre, idx) => {
-        const subgenreSongCount = (allSongs || []).filter(s => s && s.genre_ids && Array.isArray(s.genre_ids) && s.genre_ids.includes(subgenre.id)).length;
-        html += `<div class="list-item" onclick="window.showSubgenreDirect(${idx}, 'genre')">
-          <div class="item-info">
-            <div>${subgenre.name || 'Unknown'}</div>
-            <div class="subtitle">${subgenreSongCount} song${subgenreSongCount !== 1 ? 's' : ''}</div>
-          </div>
-        </div>`;
-      });
-      html += `</div>`;
-    }
-
+    // Display songs at the top
     if (genreSongs.length > 0) {
       html += `<h3>Songs (${genreSongs.length})</h3><div class="items-list">`;
       genreSongs.forEach((song, idx) => {
@@ -952,6 +926,62 @@ function showGenre(genre) {
       html += `</div>`;
     } else {
       html += `<p><em>No songs found</em></p>`;
+    }
+
+    // Display parent genres
+    if (parentGenres.length > 0) {
+      html += `<p><strong>Parent Genre${parentGenres.length > 1 ? 's' : ''}:</strong> `;
+      html += parentGenres.map(parentGenre => {
+        const parentIndex = allGenres.findIndex(g => g.id === parentGenre.id);
+        return `<span class="link" onclick="window.showGenreFromList(${parentIndex})">${parentGenre.name}</span>`;
+      }).join(', ');
+      html += `</p>`;
+    }
+
+    // Display subgenres
+    if (subgenres.length > 0) {
+      html += `<h3>Subgenres (${subgenres.length})</h3><div class="items-list">`;
+      subgenres.forEach((subgenre, idx) => {
+        const subgenreSongCount = (allSongs || []).filter(s => s && s.genre_ids && Array.isArray(s.genre_ids) && s.genre_ids.includes(subgenre.id)).length;
+        html += `<div class="list-item" onclick="window.showSubgenreDirect(${idx}, 'genre')">
+          <div class="item-info">
+            <div>${subgenre.name || 'Unknown'}</div>
+            <div class="subtitle">${subgenreSongCount} song${subgenreSongCount !== 1 ? 's' : ''}</div>
+          </div>
+        </div>`;
+      });
+      html += `</div>`;
+    }
+
+    // Display root genres (ancestral genres) at the bottom
+    if (rootGenres.length > 0) {
+      html += `<div class="section-card"><h3>🌳 Root Genres</h3><p class="muted">This genre descended from:</p><div class="items-list">`;
+      rootGenres.forEach(rootGenre => {
+        const rootIndex = allGenres.findIndex(g => g.id === rootGenre.id);
+        html += `<div class="list-item" onclick="window.showGenreFromList(${rootIndex})">
+          <div class="item-info">
+            <div>${rootGenre.name}</div>
+            <div class="subtitle">Ancestral genre</div>
+          </div>
+        </div>`;
+      });
+      html += `</div></div>`;
+    }
+
+    // Display descendant genres at the bottom
+    if (descendantGenres.length > 0) {
+      html += `<div class="section-card"><h3>🌿 Descendant Genres</h3><p class="muted">Genres descended from this:</p><div class="items-list">`;
+      descendantGenres.forEach(descGenre => {
+        const descSongCount = (allSongs || []).filter(s => s && s.genre_ids && Array.isArray(s.genre_ids) && s.genre_ids.includes(descGenre.id)).length;
+        const descIndex = allGenres.findIndex(g => g.id === descGenre.id);
+        html += `<div class="list-item" onclick="window.showGenreFromList(${descIndex})">
+          <div class="item-info">
+            <div>${descGenre.name}</div>
+            <div class="subtitle">${descSongCount} song${descSongCount !== 1 ? 's' : ''}</div>
+          </div>
+        </div>`;
+      });
+      html += `</div></div>`;
     }
 
     getMainContent().innerHTML = html;
@@ -1295,12 +1325,15 @@ function loadFeaturedContent() {
   const featuredGenresDiv = document.getElementById('featured-genres');
   if (featuredGenresDiv && allGenres.length > 0) {
     const featured = allGenres.slice(0, 6);
-    featuredGenresDiv.innerHTML = featured.map(genre => `
-      <div class="featured-card" onclick="showGenre(${JSON.stringify(genre).replace(/"/g, '&quot;')})">
-        <div class="featured-card-icon">🎵</div>
-        <div class="featured-card-name">${genre.name}</div>
-      </div>
-    `).join('');
+    featuredGenresDiv.innerHTML = featured.map(genre => {
+      const genreIndex = allGenres.findIndex(g => g.id === genre.id);
+      return `
+        <div class="featured-card" onclick="window.showGenreFromList(${genreIndex})">
+          <div class="featured-card-icon">🎵</div>
+          <div class="featured-card-name">${genre.name}</div>
+        </div>
+      `;
+    }).join('');
   }
 
   // Load featured artists
@@ -1635,8 +1668,10 @@ function renderGenresList(genres) {
       if (s.genre_id === genre.id) return true;
       return false;
     }).length;
+    // Find the index in allGenres array for proper navigation
+    const genreIndex = allGenres.findIndex(g => g.id === genre.id);
     return `
-      <div class="list-item" onclick="showGenre(${JSON.stringify(genre).replace(/"/g, '&quot;')})">
+      <div class="list-item" onclick="window.showGenreFromList(${genreIndex})">
         <img src="/images/genre.png" alt="genre">
         <div class="item-info">
           <div>${genre.name}</div>
